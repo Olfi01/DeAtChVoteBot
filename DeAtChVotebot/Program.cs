@@ -27,6 +27,7 @@ namespace DeAtChVoteBot
         private static readonly List<long> admins = new List<long>()
         { 180562990, 32659634, 222697924, 32248944, 292959071, 196490244, 79312108, 148343980,
             40890637, 267376056, 222891511, 43817863, 178145356 };
+        private const long adminChatId = -1001118086649;
         private static readonly List<string> languagesOriginal = new List<string>() { "Amnesia", "Pokémon", "Schwäbisch", "Emoji", "Spezial" };
         private static List<string> languages = languagesOriginal.Copy();
         private static readonly List<string> modesOriginal = new List<string>()
@@ -73,6 +74,7 @@ namespace DeAtChVoteBot
 
         private static void CloseAndOpenPoll(object state)
         {
+            client.SendTextMessageAsync(adminChatId, "Ergebnisse: \n\n\n" + GetCurrentLangPoll() + "\n\n\n" + GetCurrentModePoll());
             ClosePoll();
             SendPoll(DateTime.Now.AddDays(1));
         }
@@ -265,7 +267,7 @@ namespace DeAtChVoteBot
 
         private static void SendPoll(DateTime targetDate)
         {
-            DeletePoll();
+            //DeletePoll();
             var culture = new CultureInfo("de-DE");
             var day = culture.DateTimeFormat.GetDayName(targetDate.DayOfWeek);
             langMsgText = $"*Große Runde für {day}, den {targetDate.ToShortDateString()} (Sprache):*";

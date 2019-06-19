@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DeAtChVotebot;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -26,10 +27,10 @@ namespace DeAtChVoteBot
         private static readonly List<long> admins = new List<long>()
         { 180562990, 32659634, 222697924, 32248944, 292959071, 196490244, 79312108, 148343980,
             40890637, 267376056, 222891511, 43817863, 178145356 };
-        private static readonly List<string> languagesOriginal = new List<string>() { "Normal", "Amnesia", "Pokémon", "Schwäbisch", "Emoji" };
-        private static List<string> languages = languagesOriginal;
+        private static readonly List<string> languagesOriginal = new List<string>() { "Amnesia", "Pokémon", "Schwäbisch", "Emoji", "Spezial" };
+        private static List<string> languages = languagesOriginal.Copy();
         private static readonly List<string> modesOriginal = new List<string>()
-        { "Nichts", "Secret lynch", "Kein Verraten der Rollen nach dem Tod", "Beides" };
+        { "Secret lynch", "Kein Verraten der Rollen nach dem Tod", "Beides" };
         private static List<string> modes = modesOriginal;
         private static TelegramBotClient client;
         private static string langMsgText = "";
@@ -48,6 +49,10 @@ namespace DeAtChVoteBot
             client.OnCallbackQuery += Client_OnCallbackQuery;
             client.StartReceiving();
             bool running = true;
+            Timer timer = new Timer(CloseAndOpenPoll);
+            DateTime now = DateTime.Now;
+            DateTime grTime = new DateTime(now.Year, now.Month, now.Day, 21, 0, 0);
+            timer.Change(grTime - DateTime.Now, TimeSpan.FromHours(24));
             while (running)
             {
                 var cmd = Console.ReadLine();
@@ -64,6 +69,12 @@ namespace DeAtChVoteBot
                         break;
                 }
             }
+        }
+
+        private static void CloseAndOpenPoll(object state)
+        {
+            ClosePoll();
+            SendPoll(DateTime.Now.AddDays(1));
         }
 
         private static void Client_OnCallbackQuery(object sender, CallbackQueryEventArgs e)
@@ -249,7 +260,7 @@ namespace DeAtChVoteBot
             var won = languages.OrderBy(x => -langVotes.Count(y => y.Value == x)).First();
             var wonMode = modes.OrderBy(x => -modeVotes.Count(y => y.Value == x)).First();
             File.WriteAllText(wonYesterdayPath, won + "\n" + wonMode);
-            languages = languagesOriginal;
+            languages = languagesOriginal.Copy();
         }
 
         private static void SendPoll(DateTime targetDate)
@@ -275,7 +286,7 @@ namespace DeAtChVoteBot
             string yesterday;
             if (lines.Length < 2) yesterday = "";
             else yesterday = lines[1];
-            List<string> modesToday = new List<string>();
+            List<string> modesToday = new List<string>() { "Nichts" };
             foreach (var m in modes) if (m != yesterday) modesToday.Add(m);
             var rows = new List<InlineKeyboardButton[]>();
             foreach (var mode in modesToday)
@@ -294,7 +305,7 @@ namespace DeAtChVoteBot
             string yesterday;
             if (lines.Length < 2) yesterday = "";
             else yesterday = lines[1];
-            List<string> modesToday = new List<string>();
+            List<string> modesToday = new List<string>() { "Nichts" };
             foreach (var m in modes) if (m != yesterday) modesToday.Add(m);
             return string.Join("\n\n", modesToday.OrderBy(x => -modeVotes.Count(y => y.Value == x)).Select(x =>
             {
@@ -317,7 +328,7 @@ namespace DeAtChVoteBot
         private static InlineKeyboardMarkup GetLangReplyMarkup()
         {
             var yesterday = File.ReadAllLines(wonYesterdayPath)[0];
-            var langsToday = new List<string>();
+            var langsToday = new List<string>() { "Normal" };
             foreach (var l in languages) if (l != yesterday) langsToday.Add(l);
             var rows = new List<InlineKeyboardButton[]>();
             foreach (var lang in langsToday)
@@ -333,7 +344,7 @@ namespace DeAtChVoteBot
         private static string GetCurrentLangPoll()
         {
             var yesterday = File.ReadAllLines(wonYesterdayPath)[0];
-            var langsToday = new List<string>();
+            var langsToday = new List<string>() { "Normal" };
             foreach (var l in languages) if (l != yesterday) langsToday.Add(l);
             return string.Join("\n\n", langsToday.OrderBy(x => -langVotes.Count(y => y.Value == x)).Select(x =>
             {

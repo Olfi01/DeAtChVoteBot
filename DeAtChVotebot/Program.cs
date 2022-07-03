@@ -34,13 +34,17 @@ namespace DeAtChVoteBot
         private static readonly List<string> modesOriginal = new List<string>()
         { "Secret lynch", "Kein Verraten der Rollen nach dem Tod", "Beides" };
         private static List<string> modes = modesOriginal.Copy();
+        private static readonly List<string> thieves = new List<string>() { "Dieb jede Nacht", "Dieb nur in der ersten Nacht" };
         private static TelegramBotClient client;
         private static string langMsgText = "";
         private static string modeMsgText = "";
+        private static string thiefMsgText = "";
         private static readonly Dictionary<long, string> langVotes = new Dictionary<long, string>();
         private static readonly Dictionary<long, string> modeVotes = new Dictionary<long, string>();
+        private static readonly Dictionary<long, string> thiefVotes = new Dictionary<long, string>();
         private static int langMsgId = 0;
         private static int modeMsgId = 0;
+        private static int thiefMsgId = 0;
         private static readonly List<Action<CallbackQuery>> callbackQueryHandlers = new List<Action<CallbackQuery>>();
         private static readonly List<Action<Message>> messageHandlers = new List<Action<Message>>();
 
@@ -95,7 +99,7 @@ namespace DeAtChVoteBot
 
         private static async void CloseAndOpenPoll(object state)
         {
-            await client.SendTextMessageAsync(adminChatId, "Ergebnisse: \n\n\n" + GetCurrentLangPoll() + "\n\n\n" + GetCurrentModePoll());
+            await client.SendTextMessageAsync(adminChatId, "Ergebnisse: \n\n\n" + GetCurrentLangPoll() + "\n\n\n" + GetCurrentModePoll() + "\n\n\n" + GetCurrentThiefPoll());
             await ClosePoll();
             await SendPoll(DateTime.Now.AddDays(1));
         }
@@ -125,23 +129,44 @@ namespace DeAtChVoteBot
                 await RefreshLangMsg();
                 return;
             }
-            if (modeVotes.ContainsKey(query.From.Id))
+            if (modes.Contains(data))
             {
-                if (data == modeVotes[query.From.Id])
+                if (modeVotes.ContainsKey(query.From.Id))
                 {
-                    modeVotes.Remove(query.From.Id);
-                    await client.AnswerCallbackQueryAsync(query.Id, "Du hast deine Stimme zurückgezogen.");
+                    if (data == modeVotes[query.From.Id])
+                    {
+                        modeVotes.Remove(query.From.Id);
+                        await client.AnswerCallbackQueryAsync(query.Id, "Du hast deine Stimme zurückgezogen.");
+                        await RefreshModeMsg();
+                        return;
+                    }
+                    modeVotes[query.From.Id] = data;
+                    await client.AnswerCallbackQueryAsync(query.Id, $"Du hast für {data} abgestimmt.");
                     await RefreshModeMsg();
                     return;
                 }
-                modeVotes[query.From.Id] = data;
+                modeVotes.Add(query.From.Id, data);
                 await client.AnswerCallbackQueryAsync(query.Id, $"Du hast für {data} abgestimmt.");
                 await RefreshModeMsg();
                 return;
             }
-            modeVotes.Add(query.From.Id, data);
+            if (thiefVotes.ContainsKey(query.From.Id))
+            {
+                if (data == thiefVotes[query.From.Id])
+                {
+                    thiefVotes.Remove(query.From.Id);
+                    await client.AnswerCallbackQueryAsync(query.Id, "Du hast deine Stimme zurückgezogen.");
+                    await RefreshThiefMsg();
+                    return;
+                }
+                thiefVotes[query.From.Id] = data;
+                await client.AnswerCallbackQueryAsync(query.Id, $"Du hast für {data} abgestimmt.");
+                await RefreshThiefMsg();
+                return;
+            }
+            thiefVotes.Add(query.From.Id, data);
             await client.AnswerCallbackQueryAsync(query.Id, $"Du hast für {data} abgestimmt.");
-            await RefreshModeMsg();
+            await RefreshThiefMsg();
             return;
         }
 
@@ -265,6 +290,12 @@ namespace DeAtChVoteBot
                 replyMarkup: GetModeReplyMarkup(), parseMode: ParseMode.Markdown);
         }
 
+        private static async Task RefreshThiefMsg()
+        {
+            await client.EditMessageTextAsync(channelName, thiefMsgId, thiefMsgText + "\n" + GetCurrentThiefPoll(),
+                replyMarkup: GetThiefReplyMarkup(), parseMode: ParseMode.Markdown);
+        }
+
         private static async Task DeletePoll()
         {
             await client.DeleteMessageAsync(channelName, langMsgId);
@@ -279,6 +310,7 @@ namespace DeAtChVoteBot
             var wonMode = modes.OrderBy(x => -modeVotes.Count(y => y.Value == x)).First();
             File.WriteAllText(wonYesterdayPath, won + "\n" + wonMode);
             languages = languagesOriginal.Copy();
+            modes = modesOriginal.Copy();
         }
 
         private static async Task SendPoll(DateTime targetDate)
@@ -294,6 +326,10 @@ namespace DeAtChVoteBot
             m = await client.SendTextMessageAsync(channelName, modeMsgText + "\n" + GetCurrentModePoll(), 
                 replyMarkup: GetModeReplyMarkup(), parseMode: ParseMode.Markdown);
             modeMsgId = m.MessageId;
+            thiefMsgText = $"*Große Runde für {day}, den {targetDate.ToShortDateString()} (Dieb):*";
+            m = await client.SendTextMessageAsync(channelName, thiefMsgText + "\n" + GetCurrentThiefPoll(),
+                replyMarkup: GetThiefReplyMarkup(), parseMode: ParseMode.Markdown);
+            thiefMsgId = m.MessageId;
         }
 
         private static InlineKeyboardMarkup GetModeReplyMarkup()
@@ -359,13 +395,53 @@ namespace DeAtChVoteBot
 
         private static string GetCurrentLangPoll()
         {
-            var yesterday = File.ReadAllLines(wonYesterdayPath)[0];
+            string[] lines = File.ReadAllLines(wonYesterdayPath);
+            string yesterday;
+            if (lines.Length < 1) yesterday = "";
+            else yesterday = lines[0];
             var langsToday = new List<string>() { "Normal" };
             foreach (var l in languages) if (l != yesterday) langsToday.Add(l);
             return string.Join("\n\n", langsToday.OrderBy(x => -langVotes.Count(y => y.Value == x)).Select(x =>
             {
                 var c = langVotes.Count(y => y.Value == x);
                 var t = langVotes.Count;
+                float perc = 0;
+                if (t != 0)
+                    perc = (float)c / t;
+                perc = perc * 100;
+                var s = $"{x} - {c}\n";
+                for (int i = 0; i < perc / 10; i++)
+                {
+                    s += "👍";
+                }
+                s += $" {perc}%";
+                return s;
+            }));
+        }
+
+        private static InlineKeyboardMarkup GetThiefReplyMarkup()
+        {
+            List<string> thievesToday = new List<string>();
+            foreach (var m in thieves) thievesToday.Add(m);
+            var rows = new List<InlineKeyboardButton[]>();
+            foreach (var thief in thievesToday)
+            {
+                rows.Add(new InlineKeyboardButton[]
+                {
+                    new InlineKeyboardButton($"{thief} - {thiefVotes.Count(x => x.Value == thief)}") { CallbackData = thief }
+                });
+            }
+            return new InlineKeyboardMarkup(rows.ToArray());
+        }
+
+        private static string GetCurrentThiefPoll()
+        {
+            List<string> thievesToday = new List<string>();
+            foreach (var m in thieves) thievesToday.Add(m);
+            return string.Join("\n\n", thievesToday.OrderBy(x => -thiefVotes.Count(y => y.Value == x)).Select(x =>
+            {
+                var c = thiefVotes.Count(y => y.Value == x);
+                var t = thiefVotes.Count;
                 float perc = 0;
                 if (t != 0)
                     perc = (float)c / t;

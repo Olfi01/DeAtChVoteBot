@@ -9,9 +9,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Args;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InlineKeyboardButtons;
 using Telegram.Bot.Types.ReplyMarkups;
+using File = System.IO.File;
 
 namespace DeAtChVoteBot
 {
@@ -20,7 +21,7 @@ namespace DeAtChVoteBot
         private const string baseDir = "C:\\Olfi01\\DEATCHVote\\";
         private const string wonYesterdayPath = baseDir + "yesterday.txt";
 #if DEBUG
-        private const string channelName = "";
+        private const string channelName = "@flomstestchannel";
 #else
         private const string channelName = "@werwolfinfo";
 #endif
@@ -32,23 +33,24 @@ namespace DeAtChVoteBot
         private static List<string> languages = languagesOriginal.Copy();
         private static readonly List<string> modesOriginal = new List<string>()
         { "Secret lynch", "Kein Verraten der Rollen nach dem Tod", "Beides" };
-        private static List<string> modes = modesOriginal;
+        private static List<string> modes = modesOriginal.Copy();
         private static TelegramBotClient client;
         private static string langMsgText = "";
         private static string modeMsgText = "";
-        private static Dictionary<long, string> langVotes = new Dictionary<long, string>();
-        private static Dictionary<long, string> modeVotes = new Dictionary<long, string>();
+        private static readonly Dictionary<long, string> langVotes = new Dictionary<long, string>();
+        private static readonly Dictionary<long, string> modeVotes = new Dictionary<long, string>();
         private static int langMsgId = 0;
         private static int modeMsgId = 0;
+        private static readonly List<Action<CallbackQuery>> callbackQueryHandlers = new List<Action<CallbackQuery>>();
+        private static readonly List<Action<Message>> messageHandlers = new List<Action<Message>>();
 
         public static void Main(string[] args)
         {
             Directory.CreateDirectory(baseDir);
             if (!File.Exists(wonYesterdayPath)) File.Create(wonYesterdayPath);
             client = new TelegramBotClient(args[0]);
-            client.OnUpdate += Client_OnUpdate;
-            client.OnCallbackQuery += Client_OnCallbackQuery;
-            client.StartReceiving();
+            client.ClearUpdates().Wait();
+            client.StartReceiving(Client_UpdateHandler, Client_ErrorHandler);
             bool running = true;
             Timer timer = new Timer(CloseAndOpenPoll);
             DateTime now = DateTime.Now;
@@ -62,224 +64,236 @@ namespace DeAtChVoteBot
                     case "stop":
                     case "stopbot":
                         running = false;
-                        client.StopReceiving();
                         break;
                     case "start":
-                        var t = new Thread(() => client.StartReceiving());
+                        var t = new Thread(() => client.StartReceiving(Client_UpdateHandler, Client_ErrorHandler));
                         t.Start();
                         break;
                 }
             }
         }
 
-        private static void CloseAndOpenPoll(object state)
+        private static async Task Client_ErrorHandler(ITelegramBotClient client, Exception exception, CancellationToken cancellationToken)
         {
-            client.SendTextMessageAsync(adminChatId, "Ergebnisse: \n\n\n" + GetCurrentLangPoll() + "\n\n\n" + GetCurrentModePoll());
-            ClosePoll();
-            SendPoll(DateTime.Now.AddDays(1));
+            Console.WriteLine(exception.ToString());
+            await Task.CompletedTask;
         }
 
-        private static void Client_OnCallbackQuery(object sender, CallbackQueryEventArgs e)
+        private static async Task Client_UpdateHandler(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
         {
-            var data = e.CallbackQuery.Data;
-            if (data == "today" || data == "tomorrow") return;
+            if (update.Type == UpdateType.Message)
+            {
+                Parallel.ForEach(messageHandlers, (handler) => handler.Invoke(update.Message));
+                await Client_OnMessageUpdate(update.Message);
+            }
+            else if (update.Type == UpdateType.CallbackQuery)
+            {
+                Parallel.ForEach(callbackQueryHandlers, (handler) => handler.Invoke(update.CallbackQuery));
+                await Client_OnCallbackQuery(update.CallbackQuery);
+            }
+        }
+
+        private static async void CloseAndOpenPoll(object state)
+        {
+            await client.SendTextMessageAsync(adminChatId, "Ergebnisse: \n\n\n" + GetCurrentLangPoll() + "\n\n\n" + GetCurrentModePoll());
+            await ClosePoll();
+            await SendPoll(DateTime.Now.AddDays(1));
+        }
+
+        private static async Task Client_OnCallbackQuery(CallbackQuery query)
+        {
+            var data = query.Data;
+            if (data == "today" || data == "tomorrow" || data == "lang" || data == "mode" || data == "none") return;
             if (languages.Contains(data))
             {
-                if (langVotes.ContainsKey(e.CallbackQuery.From.Id))
+                if (langVotes.ContainsKey(query.From.Id))
                 {
-                    if (data == langVotes[e.CallbackQuery.From.Id])
+                    if (data == langVotes[query.From.Id])
                     {
-                        langVotes.Remove(e.CallbackQuery.From.Id);
-                        client.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Du hast deine Stimme zurückgezogen.");
-                        RefreshLangMsg();
+                        langVotes.Remove(query.From.Id);
+                        await client.AnswerCallbackQueryAsync(query.Id, "Du hast deine Stimme zurückgezogen.");
+                        await RefreshLangMsg();
                         return;
                     }
-                    langVotes[e.CallbackQuery.From.Id] = data;
-                    client.AnswerCallbackQueryAsync(e.CallbackQuery.Id, $"Du hast für {data} abgestimmt.");
-                    RefreshLangMsg();
+                    langVotes[query.From.Id] = data;
+                    await client.AnswerCallbackQueryAsync(query.Id, $"Du hast für {data} abgestimmt.");
+                    await RefreshLangMsg();
                     return;
                 }
-                langVotes.Add(e.CallbackQuery.From.Id, data);
-                client.AnswerCallbackQueryAsync(e.CallbackQuery.Id, $"Du hast für {data} abgestimmt.");
-                RefreshLangMsg();
+                langVotes.Add(query.From.Id, data);
+                await client.AnswerCallbackQueryAsync(query.Id, $"Du hast für {data} abgestimmt.");
+                await RefreshLangMsg();
                 return;
             }
-            if (modeVotes.ContainsKey(e.CallbackQuery.From.Id))
+            if (modeVotes.ContainsKey(query.From.Id))
             {
-                if (data == modeVotes[e.CallbackQuery.From.Id])
+                if (data == modeVotes[query.From.Id])
                 {
-                    modeVotes.Remove(e.CallbackQuery.From.Id);
-                    client.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Du hast deine Stimme zurückgezogen.");
-                    RefreshModeMsg();
+                    modeVotes.Remove(query.From.Id);
+                    await client.AnswerCallbackQueryAsync(query.Id, "Du hast deine Stimme zurückgezogen.");
+                    await RefreshModeMsg();
                     return;
                 }
-                modeVotes[e.CallbackQuery.From.Id] = data;
-                client.AnswerCallbackQueryAsync(e.CallbackQuery.Id, $"Du hast für {data} abgestimmt.");
-                RefreshModeMsg();
+                modeVotes[query.From.Id] = data;
+                await client.AnswerCallbackQueryAsync(query.Id, $"Du hast für {data} abgestimmt.");
+                await RefreshModeMsg();
                 return;
             }
-            modeVotes.Add(e.CallbackQuery.From.Id, data);
-            client.AnswerCallbackQueryAsync(e.CallbackQuery.Id, $"Du hast für {data} abgestimmt.");
-            RefreshModeMsg();
+            modeVotes.Add(query.From.Id, data);
+            await client.AnswerCallbackQueryAsync(query.Id, $"Du hast für {data} abgestimmt.");
+            await RefreshModeMsg();
             return;
         }
 
-        private static void Client_OnUpdate(object sender, UpdateEventArgs e)
+        private static async Task Client_OnMessageUpdate(Message msg)
         {
-            if (e.Update.Type != UpdateType.MessageUpdate || e.Update.Message.Type != MessageType.TextMessage
-                || !admins.Contains(e.Update.Message.From.Id)) return;
-            var msg = e.Update.Message;
-            if (msg.Entities.Count < 1 || msg.Entities[0].Type != MessageEntityType.BotCommand || msg.Entities[0].Offset != 0) return;
-            var cmd = msg.EntityValues[0];
+            if (msg.Type != MessageType.Text
+                || !admins.Contains(msg.From.Id)) return;
+            if (msg.Entities == null || msg.Entities.Count() < 1 || msg.Entities[0].Type != MessageEntityType.BotCommand || msg.Entities[0].Offset != 0) return;
+            var cmd = msg.EntityValues.First();
             if (cmd.Contains("@")) cmd = cmd.Remove(cmd.IndexOf("@"));
             switch (cmd)
             {
                 case "/sendpoll":
-                    var t = new Thread(() => SendPoll(msg));
+                    Thread t = new Thread(async () => await SendPoll(msg));
                     t.Start();
                     break;
                 case "/closepoll":
-                    client.SendTextMessageAsync(msg.Chat.Id,
+                    await client.SendTextMessageAsync(msg.Chat.Id,
                         "Abstimmung geschlossen. Ergebnisse: \n\n\n" + GetCurrentLangPoll() + "\n\n\n" + GetCurrentModePoll());
-                    ClosePoll();
+                    await ClosePoll();
                     langVotes.Clear();
                     modeVotes.Clear();
                     break;
             }
         }
 
-        private static void SendPoll(Telegram.Bot.Types.Message msg)
+        private static async Task SendPoll(Message msg)
         {
             ManualResetEvent mre = new ManualResetEvent(false);
             var todayTomorrow = new List<string>() { "today", "tomorrow" };
             bool today = false;
-            EventHandler<CallbackQueryEventArgs> cHandler = (sender2, e2) =>
+            Action<CallbackQuery> cHandler = (query) =>
             {
-                if (!admins.Contains(e2.CallbackQuery.From.Id) || !todayTomorrow.Contains(e2.CallbackQuery.Data)) return;
-                if (e2.CallbackQuery.Data == "today") today = true;
+                if (!admins.Contains(query.From.Id) || !todayTomorrow.Contains(query.Data)) return;
+                if (query.Data == "today") today = true;
                 mre.Set();
             };
-            var t = client.SendTextMessageAsync(msg.Chat.Id, "Die Abstimmung für heute oder morgen?",
+            var sent = await client.SendTextMessageAsync(msg.Chat.Id, "Die Abstimmung für heute oder morgen?",
                 replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton[]
                 {
-                            new InlineKeyboardCallbackButton("Heute", "today"),
-                            new InlineKeyboardCallbackButton("Morgen", "tomorrow")
+                    new InlineKeyboardButton("Heute") { CallbackData = "today" },
+                    new InlineKeyboardButton("Morgen") { CallbackData = "tomorrow" }
                 }));
-            t.Wait();
-            var sent = t.Result;
             try
             {
-                client.OnCallbackQuery += cHandler;
+                callbackQueryHandlers.Add(cHandler);
                 mre.WaitOne();
             }
             finally
             {
-                client.OnCallbackQuery -= cHandler;
+                callbackQueryHandlers.Remove(cHandler);
             }
             mre.Reset();
             string answer = "none";
             List<string> custom = new List<string>() { "lang", "mode", "none" };
-            cHandler = (sender2, e2) =>
+            cHandler = (query) =>
             {
-                answer = e2.CallbackQuery.Data;
-                if (!admins.Contains(e2.CallbackQuery.From.Id) || !custom.Contains(answer)) return;
+                answer = query.Data;
+                if (!admins.Contains(query.From.Id) || !custom.Contains(answer)) return;
                 mre.Set();
             };
-            t = client.SendTextMessageAsync(msg.Chat.Id, "Zusätzliche Option?",
+            await client.EditMessageTextAsync(sent.Chat.Id, sent.MessageId, "Zusätzliche Option?",
                 replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton[]
                 {
-                            new InlineKeyboardCallbackButton("Sprache", "lang"),
-                            new InlineKeyboardCallbackButton("Modus", "mode"),
-                            new InlineKeyboardCallbackButton("Keine", "none")
+                    new InlineKeyboardButton("Sprache") { CallbackData = "lang" },
+                    new InlineKeyboardButton("Modus") { CallbackData = "mode" },
+                    new InlineKeyboardButton("Keine") { CallbackData = "none" }
                 }));
-            t.Wait();
             try
             {
-                client.OnCallbackQuery += cHandler;
+                callbackQueryHandlers.Add(cHandler);
                 mre.WaitOne();
             }
             finally
             {
-                client.OnCallbackQuery -= cHandler;
+                callbackQueryHandlers.Remove(cHandler);
             }
             if (answer != "none")
             {
                 mre.Reset();
-                t = client.SendTextMessageAsync(msg.Chat.Id, "Antworte auf diese Nachricht bitte mit der zusätzlichen Option." +
-                    " Beim Senden von /closepoll wird sie wieder entfernt.", replyMarkup: new ForceReply());
-                var replyTo = t.Result;
-                EventHandler<MessageEventArgs> mHandler = (sender, e) =>
+                var replyTo = await client.SendTextMessageAsync(msg.Chat.Id, "Antworte auf diese Nachricht bitte mit der zusätzlichen Option." +
+                    " Beim Senden von /closepoll wird sie wieder entfernt.", replyMarkup: new ForceReplyMarkup());
+                Action<Message> mHandler = (m) =>
                 {
-                    if (!admins.Contains(e.Message.From.Id) || e.Message.ReplyToMessage == null
-                    || e.Message.ReplyToMessage.MessageId != replyTo.MessageId) return;
+                    if (!admins.Contains(m.From.Id) || m.ReplyToMessage == null
+                    || m.ReplyToMessage.MessageId != replyTo.MessageId) return;
                     switch (answer)
                     {
                         case "lang":
-                            languages.Add(e.Message.Text);
+                            languages.Add(m.Text);
                             break;
                         case "mode":
-                            modes.Add(e.Message.Text);
+                            modes.Add(m.Text);
                             break;
                     }
                     mre.Set();
                 };
                 try
                 {
-                    client.OnMessage += mHandler;
+                    messageHandlers.Add(mHandler);
                     mre.WaitOne();
                 }
                 finally
                 {
-                    client.OnMessage -= mHandler;
+                    messageHandlers.Remove(mHandler);
                 }
             }
-            SendPoll(today ? DateTime.Today : DateTime.Today.AddDays(1));
-            client.EditMessageTextAsync(sent.Chat.Id, sent.MessageId, "Abstimmung wurde gesendet.");
+            await SendPoll(today ? DateTime.Today : DateTime.Today.AddDays(1));
+            await client.EditMessageTextAsync(sent.Chat.Id, sent.MessageId, "Abstimmung wurde gesendet.");
         }
 
-        private static void RefreshLangMsg()
+        private static async Task RefreshLangMsg()
         {
-            client.EditMessageTextAsync(channelName, langMsgId, langMsgText + "\n" + GetCurrentLangPoll(), 
+            await client.EditMessageTextAsync(channelName, langMsgId, langMsgText + "\n" + GetCurrentLangPoll(), 
                 replyMarkup: GetLangReplyMarkup(), parseMode: ParseMode.Markdown);
         }
 
-        private static void RefreshModeMsg()
+        private static async Task RefreshModeMsg()
         {
-            client.EditMessageTextAsync(channelName, modeMsgId, modeMsgText + "\n" + GetCurrentModePoll(), 
+            await client.EditMessageTextAsync(channelName, modeMsgId, modeMsgText + "\n" + GetCurrentModePoll(), 
                 replyMarkup: GetModeReplyMarkup(), parseMode: ParseMode.Markdown);
         }
 
-        private static void DeletePoll()
+        private static async Task DeletePoll()
         {
-            client.DeleteMessageAsync(channelName, langMsgId);
-            client.DeleteMessageAsync(channelName, modeMsgId);
+            await client.DeleteMessageAsync(channelName, langMsgId);
+            await client.DeleteMessageAsync(channelName, modeMsgId);
         }
 
-        private static void ClosePoll()
+        private static async Task ClosePoll()
         {
-            client.EditMessageReplyMarkupAsync(channelName, langMsgId);
-            client.EditMessageReplyMarkupAsync(channelName, modeMsgId);
+            await client.EditMessageReplyMarkupAsync(channelName, langMsgId);
+            await client.EditMessageReplyMarkupAsync(channelName, modeMsgId);
             var won = languages.OrderBy(x => -langVotes.Count(y => y.Value == x)).First();
             var wonMode = modes.OrderBy(x => -modeVotes.Count(y => y.Value == x)).First();
             File.WriteAllText(wonYesterdayPath, won + "\n" + wonMode);
             languages = languagesOriginal.Copy();
         }
 
-        private static void SendPoll(DateTime targetDate)
+        private static async Task SendPoll(DateTime targetDate)
         {
             //DeletePoll();
             var culture = new CultureInfo("de-DE");
             var day = culture.DateTimeFormat.GetDayName(targetDate.DayOfWeek);
             langMsgText = $"*Große Runde für {day}, den {targetDate.ToShortDateString()} (Sprache):*";
-            var t = client.SendTextMessageAsync(channelName, langMsgText + "\n" + GetCurrentLangPoll(),
+            Message m = await client.SendTextMessageAsync(channelName, langMsgText + "\n" + GetCurrentLangPoll(),
                 replyMarkup: GetLangReplyMarkup(), parseMode: ParseMode.Markdown);
-            t.Wait();
-            langMsgId = t.Result.MessageId;
+            langMsgId = m.MessageId;
             modeMsgText = $"*Große Runde für {day}, den {targetDate.ToShortDateString()} (Modus):*";
-            t = client.SendTextMessageAsync(channelName, modeMsgText + "\n" + GetCurrentModePoll(), 
+            m = await client.SendTextMessageAsync(channelName, modeMsgText + "\n" + GetCurrentModePoll(), 
                 replyMarkup: GetModeReplyMarkup(), parseMode: ParseMode.Markdown);
-            t.Wait();
-            modeMsgId = t.Result.MessageId;
+            modeMsgId = m.MessageId;
         }
 
         private static InlineKeyboardMarkup GetModeReplyMarkup()
@@ -295,7 +309,7 @@ namespace DeAtChVoteBot
             {
                 rows.Add(new InlineKeyboardButton[]
                 {
-                    new InlineKeyboardCallbackButton($"{mode} - {modeVotes.Count(x => x.Value == mode)}", mode)
+                    new InlineKeyboardButton($"{mode} - {modeVotes.Count(x => x.Value == mode)}") { CallbackData = mode }
                 });
             }
             return new InlineKeyboardMarkup(rows.ToArray());
@@ -337,7 +351,7 @@ namespace DeAtChVoteBot
             {
                 rows.Add(new InlineKeyboardButton[]
                 {
-                    new InlineKeyboardCallbackButton($"{lang} - {langVotes.Count(x => x.Value == lang)}", lang)
+                    new InlineKeyboardButton($"{lang} - {langVotes.Count(x => x.Value == lang)}") { CallbackData = lang }
                 });
             }
             return new InlineKeyboardMarkup(rows.ToArray());

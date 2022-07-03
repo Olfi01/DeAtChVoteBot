@@ -58,7 +58,7 @@ namespace DeAtChVoteBot
             bool running = true;
             Timer timer = new Timer(CloseAndOpenPoll);
             DateTime now = DateTime.Now;
-            DateTime grTime = new DateTime(now.Year, now.Month, now.Day, 21, 0, 0);
+            DateTime grTime = new DateTime(now.Year, now.Month, now.Hour >= 21 ? now.Day + 1 : now.Day, 21, 0, 0);
             timer.Change(grTime - DateTime.Now, TimeSpan.FromHours(24));
             while (running)
             {

@@ -306,6 +306,7 @@ namespace DeAtChVoteBot
         {
             await client.EditMessageReplyMarkupAsync(channelName, langMsgId);
             await client.EditMessageReplyMarkupAsync(channelName, modeMsgId);
+            await client.EditMessageReplyMarkupAsync(channelName, thiefMsgId);
             var won = languages.OrderBy(x => -langVotes.Count(y => y.Value == x)).First();
             var wonMode = modes.OrderBy(x => -modeVotes.Count(y => y.Value == x)).First();
             File.WriteAllText(wonYesterdayPath, won + "\n" + wonMode);

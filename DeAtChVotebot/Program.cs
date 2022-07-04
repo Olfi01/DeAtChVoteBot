@@ -108,7 +108,7 @@ namespace DeAtChVoteBot
         {
             var data = query.Data;
             if (data == "today" || data == "tomorrow" || data == "lang" || data == "mode" || data == "none") return;
-            if (languages.Contains(data))
+            if (languages.Contains(data) || data == "Normal")
             {
                 if (langVotes.ContainsKey(query.From.Id))
                 {
@@ -129,7 +129,7 @@ namespace DeAtChVoteBot
                 await RefreshLangMsg();
                 return;
             }
-            if (modes.Contains(data))
+            if (modes.Contains(data) || data == "Nichts")
             {
                 if (modeVotes.ContainsKey(query.From.Id))
                 {

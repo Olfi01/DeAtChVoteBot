@@ -187,8 +187,6 @@ namespace DeAtChVoteBot
                     await client.SendTextMessageAsync(msg.Chat.Id,
                         "Abstimmung geschlossen. Ergebnisse: \n\n\n" + GetCurrentLangPoll() + "\n\n\n" + GetCurrentModePoll());
                     await ClosePoll();
-                    langVotes.Clear();
-                    modeVotes.Clear();
                     break;
             }
         }
@@ -312,6 +310,9 @@ namespace DeAtChVoteBot
             File.WriteAllText(wonYesterdayPath, won + "\n" + wonMode);
             languages = languagesOriginal.Copy();
             modes = modesOriginal.Copy();
+            langVotes.Clear();
+            modeVotes.Clear();
+            thiefVotes.Clear();
         }
 
         private static async Task SendPoll(DateTime targetDate)

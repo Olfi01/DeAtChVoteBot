@@ -29,12 +29,13 @@ namespace DeAtChVoteBot
         { 180562990, 32659634, 222697924, 32248944, 292959071, 196490244, 79312108, 148343980,
             40890637, 267376056, 222891511, 43817863, 178145356 };
         private const long adminChatId = -1001118086649;
-        private static readonly List<string> languagesOriginal = new List<string>() { "Amnesia", "Pokémon", "Schwäbisch", "Emoji", "Spezial" };
+        private static readonly List<string> languagesOriginal = new List<string>() { "Amnesia", "Pokémon", "Schwäbisch", "Emoji", "Harry Potter", "Spezial" };
         private static List<string> languages = languagesOriginal.Copy();
         private static readonly List<string> modesOriginal = new List<string>()
         { "Secret lynch", "Kein Verraten der Rollen nach dem Tod", "Beides" };
         private static List<string> modes = modesOriginal.Copy();
-        private static readonly List<string> thieves = new List<string>() { "Dieb jede Nacht", "Dieb nur in der ersten Nacht" };
+        private static readonly List<string> thievesOriginal = new List<string>() { "Dieb jede Nacht", "Dieb nur in der ersten Nacht", "Kein Dieb" };
+        private static List<string> thieves = thievesOriginal.Copy();
         private static TelegramBotClient client;
         private static string langMsgText = "";
         private static string modeMsgText = "";
@@ -298,6 +299,7 @@ namespace DeAtChVoteBot
         {
             await client.DeleteMessageAsync(channelName, langMsgId);
             await client.DeleteMessageAsync(channelName, modeMsgId);
+            await client.DeleteMessageAsync(channelName, thiefMsgId);
         }
 
         private static async Task ClosePoll()
@@ -307,9 +309,11 @@ namespace DeAtChVoteBot
             await client.EditMessageReplyMarkupAsync(channelName, thiefMsgId);
             var won = languages.OrderBy(x => -langVotes.Count(y => y.Value == x)).First();
             var wonMode = modes.OrderBy(x => -modeVotes.Count(y => y.Value == x)).First();
-            File.WriteAllText(wonYesterdayPath, won + "\n" + wonMode);
+            var wonThief = modes.OrderBy(x => -thiefVotes.Count(y => y.Value == x)).First();
+            File.WriteAllText(wonYesterdayPath, won + "\n" + wonMode + "\n" + wonThief);
             languages = languagesOriginal.Copy();
             modes = modesOriginal.Copy();
+            thieves = thievesOriginal.Copy();
             langVotes.Clear();
             modeVotes.Clear();
             thiefVotes.Clear();
@@ -423,8 +427,12 @@ namespace DeAtChVoteBot
 
         private static InlineKeyboardMarkup GetThiefReplyMarkup()
         {
+            string[] lines = File.ReadAllLines(wonYesterdayPath);
+            string yesterday;
+            if (lines.Length < 3) yesterday = "";
+            else yesterday = lines[2];
             List<string> thievesToday = new List<string>();
-            foreach (var m in thieves) thievesToday.Add(m);
+            foreach (var l in thieves) if (l != yesterday) thievesToday.Add(l);
             var rows = new List<InlineKeyboardButton[]>();
             foreach (var thief in thievesToday)
             {
@@ -438,8 +446,12 @@ namespace DeAtChVoteBot
 
         private static string GetCurrentThiefPoll()
         {
+            string[] lines = File.ReadAllLines(wonYesterdayPath);
+            string yesterday;
+            if (lines.Length < 3) yesterday = "";
+            else yesterday = lines[2];
             List<string> thievesToday = new List<string>();
-            foreach (var m in thieves) thievesToday.Add(m);
+            foreach (var l in thieves) if (l != yesterday) thievesToday.Add(l);
             return string.Join("\n\n", thievesToday.OrderBy(x => -thiefVotes.Count(y => y.Value == x)).Select(x =>
             {
                 var c = thiefVotes.Count(y => y.Value == x);

@@ -48,6 +48,7 @@ namespace DeAtChVoteBot
         private static int thiefMsgId = 0;
         private static readonly List<Action<CallbackQuery>> callbackQueryHandlers = new List<Action<CallbackQuery>>();
         private static readonly List<Action<Message>> messageHandlers = new List<Action<Message>>();
+        private static readonly Random random = new Random();
 
         public static void Main(string[] args)
         {
@@ -100,7 +101,6 @@ namespace DeAtChVoteBot
 
         private static async void CloseAndOpenPoll(object state)
         {
-            await client.SendTextMessageAsync(adminChatId, "Ergebnisse: \n\n\n" + GetCurrentLangPoll() + "\n\n\n" + GetCurrentModePoll() + "\n\n\n" + GetCurrentThiefPoll());
             await ClosePoll();
             await SendPoll(DateTime.Now.AddDays(1));
         }
@@ -304,13 +304,20 @@ namespace DeAtChVoteBot
 
         private static async Task ClosePoll()
         {
-            await client.EditMessageReplyMarkupAsync(channelName, langMsgId);
-            await client.EditMessageReplyMarkupAsync(channelName, modeMsgId);
-            await client.EditMessageReplyMarkupAsync(channelName, thiefMsgId);
-            var won = languages.OrderBy(x => -langVotes.Count(y => y.Value == x)).First();
-            var wonMode = modes.OrderBy(x => -modeVotes.Count(y => y.Value == x)).First();
-            var wonThief = modes.OrderBy(x => -thiefVotes.Count(y => y.Value == x)).First();
+            string langPoll = GetCurrentLangPoll();
+            string modePoll = GetCurrentModePoll();
+            string thiefPoll = GetCurrentThiefPoll();
+            var won = languages.OrderBy(x => -langVotes.Count(y => y.Value == x)).ThenBy(x => random.Next()).First();
+            var wonMode = modes.OrderBy(x => -modeVotes.Count(y => y.Value == x)).ThenBy(x => random.Next()).First();
+            var wonThief = thieves.OrderBy(x => -thiefVotes.Count(y => y.Value == x)).ThenBy(x => random.Next()).First();
             File.WriteAllText(wonYesterdayPath, won + "\n" + wonMode + "\n" + wonThief);
+            await client.SendTextMessageAsync(adminChatId, $"Ergebnisse: \n\n\nSprache: {won}\n\n\nModus: {wonMode}\n\n\nDieb: {wonThief}");
+            await client.EditMessageTextAsync(channelName, langMsgId, langMsgText + "\n" + langPoll + $"\nGewonnen hat: *{won}*",
+                replyMarkup: null, parseMode: ParseMode.Markdown);
+            await client.EditMessageTextAsync(channelName, modeMsgId, modeMsgText + "\n" + modePoll + $"\nGewonnen hat: *{wonMode}*",
+                replyMarkup: null, parseMode: ParseMode.Markdown);
+            await client.EditMessageTextAsync(channelName, thiefMsgId, thiefMsgText + "\n" + thiefPoll + $"\nGewonnen hat: *{wonThief}*",
+                replyMarkup: null, parseMode: ParseMode.Markdown);
             languages = languagesOriginal.Copy();
             modes = modesOriginal.Copy();
             thieves = thievesOriginal.Copy();

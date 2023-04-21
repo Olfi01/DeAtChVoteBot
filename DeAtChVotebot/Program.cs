@@ -304,6 +304,9 @@ namespace DeAtChVoteBot
 
         private static async Task ClosePoll()
         {
+            await client.EditMessageReplyMarkupAsync(channelName, langMsgId);
+            await client.EditMessageReplyMarkupAsync(channelName, modeMsgId);
+            await client.EditMessageReplyMarkupAsync(channelName, thiefMsgId);
             string langPoll = GetCurrentLangPoll();
             string modePoll = GetCurrentModePoll();
             string thiefPoll = GetCurrentThiefPoll();

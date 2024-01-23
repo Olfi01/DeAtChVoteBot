@@ -1,10 +1,9 @@
+namespace DeAtChVoteBot.Helpers;
+
 using Microsoft.Extensions.Options;
 
-#pragma warning disable CA1050 // Declare types in namespaces
-#pragma warning disable RCS1110 // Declare types in namespaces
-public static class WebHookExtensions
-#pragma warning restore RCS1110 // Declare types in namespaces
-#pragma warning restore CA1050 // Declare types in namespaces
+
+public static class Extensions
 {
     public static T GetConfiguration<T>(this IServiceProvider serviceProvider)
         where T : class

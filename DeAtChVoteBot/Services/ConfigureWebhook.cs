@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Options;
+using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 
-namespace Telegram.Bot.Services;
+namespace DeAtChVoteBot.Services;
 
 public class ConfigureWebhook : IHostedService
 {

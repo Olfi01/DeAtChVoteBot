@@ -51,7 +51,7 @@ public class UpdateHandlers
 
     private async Task BotOnMessageReceived(Message message, CancellationToken cancellationToken)
     {
-
+        await _botClient.SendTextMessageAsync(267376056, "Hi!", cancellationToken: cancellationToken);
     }
 
     // Process Inline Keyboard callback data

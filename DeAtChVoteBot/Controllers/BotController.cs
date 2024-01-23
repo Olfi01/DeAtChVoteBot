@@ -1,9 +1,9 @@
+using DeAtChVoteBot.Filters;
+using DeAtChVoteBot.Services;
 using Microsoft.AspNetCore.Mvc;
-using Telegram.Bot.Filters;
-using Telegram.Bot.Services;
 using Telegram.Bot.Types;
 
-namespace Telegram.Bot.Controllers;
+namespace DeAtChVoteBot.Controllers;
 
 public class BotController : ControllerBase
 {

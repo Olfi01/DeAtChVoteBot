@@ -1,9 +1,11 @@
 namespace DeAtChVoteBot;
 
+using DeAtChVoteBot.Controllers;
+using DeAtChVoteBot.Database;
 using DeAtChVoteBot.Helpers;
 using DeAtChVoteBot.Services;
+using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
-using Telegram.Bot.Controllers;
 
 public class Program
 {
@@ -16,6 +18,8 @@ public class Program
         builder.Services.Configure<BotConfiguration>(botConfigurationSection);
 
         var botConfiguration = botConfigurationSection.Get<BotConfiguration>()!;
+
+        builder.Services.AddDbContext<BotDataContext>(options => options.UseMySQL(builder.Configuration.GetConnectionString("DefaultConnection")!));
 
         // Register named HttpClient to get benefits of IHttpClientFactory
         // and consume it with ITelegramBotClient typed client.

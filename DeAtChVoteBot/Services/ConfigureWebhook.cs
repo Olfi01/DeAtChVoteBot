@@ -32,11 +32,13 @@ public class ConfigureWebhook : IHostedService
         // "X-Telegram-Bot-Api-Secret-Token" with the secret token as content.
         var webhookAddress = $"{_botConfig.HostAddress}{_botConfig.Route}";
         _logger.LogInformation("Setting webhook: {WebhookAddress}", webhookAddress);
+#if !DEBUG
         await botClient.SetWebhookAsync(
             url: webhookAddress,
             allowedUpdates: Array.Empty<UpdateType>(),
             secretToken: _botConfig.SecretToken,
             cancellationToken: cancellationToken);
+#endif
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

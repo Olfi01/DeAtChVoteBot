@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: deatchvote
+    deployment: deatchvote
+  name: deatchvote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      deployment: deatchvote
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: portforward
+        deployment: portforward
+    spec:
+      containers:
+      - image: olfi01/deatchvote:latest
+        imagePullPolicy: Always
+        name: python
+        env:
+        - name: WWVOTE__BotConfig__BotToken
+          valueFrom:
+            secretKeyRef:
+              name: bot-secrets
+              key: bot-token
+        - name: WWVOTE__BotConfig__SecretToken
+          valueFrom:
+            secretKeyRef:
+              name: bot-secrets
+              key: webhook-token
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "200Mi"
+          limits:
+            cpu: "200m"
+            memory: "400Mi"

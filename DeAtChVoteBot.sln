@@ -3,7 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34511.84
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeAtChVoteBot", "DeAtChVoteBot\DeAtChVoteBot.csproj", "{E97EA070-4A44-4DD6-8FEA-E8951D515A2E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DeAtChVoteBot", "DeAtChVoteBot\DeAtChVoteBot.csproj", "{E97EA070-4A44-4DD6-8FEA-E8951D515A2E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Resources", "Resources", "{81F79DCF-BD79-4368-866A-58F5C0E40059}"
+	ProjectSection(SolutionItems) = preProject
+		deployment.yaml = deployment.yaml
+		ingress.yaml = ingress.yaml
+		service.yaml = service.yaml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

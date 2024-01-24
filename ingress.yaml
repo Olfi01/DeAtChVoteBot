@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.org/mergeable-ingress-type: minion
+  name: deatchvote
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: home.crazypokemondev.de
+    http:
+      paths:
+      - backend:
+          service:
+            name: deatchvote
+            port:
+              name: http
+        path: /wwdeatchvotebot
+        pathType: Prefix

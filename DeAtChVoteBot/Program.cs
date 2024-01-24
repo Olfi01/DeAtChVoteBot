@@ -14,6 +14,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Setup Bot configuration
+        builder.Configuration.AddEnvironmentVariables("WWVOTE__");
         var botConfigurationSection = builder.Configuration.GetSection(BotConfiguration.Configuration);
         builder.Services.Configure<BotConfiguration>(botConfigurationSection);
 
@@ -35,7 +36,7 @@ public class Program
                     });
 
         builder.Services.AddScoped<UpdateHandlers>();
-        builder.Services.AddSingleton<ManagePolls>();
+        builder.Services.AddScoped<ManagePolls>();
 
         // There are several strategies for completing asynchronous tasks during startup.
         // Some of them could be found in this article https://andrewlock.net/running-async-tasks-on-app-startup-in-asp-net-core-part-1/
@@ -52,11 +53,30 @@ public class Program
             .AddNewtonsoftJson();
 
         var app = builder.Build();
+        CreateDbIfNotExists(app);
         // Construct webhook route from the Route configuration parameter
         // It is expected that BotController has single method accepting Update
         app.MapBotWebhookRoute<BotController>(route: botConfiguration.Route);
         app.MapControllers();
         app.Run();
+    }
+
+    private static void CreateDbIfNotExists(WebApplication host)
+    {
+        using (var scope = host.Services.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+            try
+            {
+                var context = services.GetRequiredService<BotDataContext>();
+                DbInitializer.Initialize(context);
+            }
+            catch (Exception ex)
+            {
+                var logger = services.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ex, "An error occurred creating the DB.");
+            }
+        }
     }
 }
 
@@ -71,4 +91,6 @@ public class BotConfiguration
     public string Route { get; init; } = default!;
     public string SecretToken { get; init; } = default!;
     public string PollTime { get; init; } = default!;
+    public string PollChannel { get; init; } = default!;
+    public string AdminChat { get; init; } = default!;
 }

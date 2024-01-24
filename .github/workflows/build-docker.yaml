@@ -4,7 +4,6 @@ on:
   push:
     branches:
     - master
-    - webhook-rewrite
     paths-ignore:
     - Resources/**
   pull_request:

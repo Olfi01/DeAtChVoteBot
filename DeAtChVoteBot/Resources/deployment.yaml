@@ -15,8 +15,8 @@ spec:
   template:
     metadata:
       labels:
-        app: portforward
-        deployment: portforward
+        app: deatchvote
+        deployment: deatchvote
     spec:
       containers:
       - image: olfi01/deatchvote:latest

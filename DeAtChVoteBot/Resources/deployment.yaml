@@ -21,7 +21,7 @@ spec:
       containers:
       - image: olfi01/deatchvote:latest
         imagePullPolicy: Always
-        name: python
+        name: aspnet
         env:
         - name: WWVOTE__BotConfig__BotToken
           valueFrom:

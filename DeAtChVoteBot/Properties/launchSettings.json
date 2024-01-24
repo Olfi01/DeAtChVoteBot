@@ -4,8 +4,7 @@
       "commandName": "Docker",
       "environmentVariables": {
         "ASPNETCORE_HTTPS_PORTS": "8081",
-        "ASPNETCORE_HTTP_PORTS": "8080",
-        "WWVOTE__BotConfiguration__BotToken": "853447277:AAF5kE4YsmjfAiWsonCoUZBuKRB4_gFmqHg"
+        "ASPNETCORE_HTTP_PORTS": "8080"
       },
       "publishAllPorts": true,
       "useSSL": true

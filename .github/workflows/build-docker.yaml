@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build docker image
-      run: docker build ./DeAtChVoteBot --tag olfi01/deatchvote
+      run: docker build . --file ./DeAtChVoteBot/Dockerfile --tag olfi01/deatchvote
     - name: Push the Docker image
       if: ${{ github.event_name == 'push' }}
       run: |

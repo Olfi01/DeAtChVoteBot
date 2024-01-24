@@ -33,6 +33,11 @@ spec:
             secretKeyRef:
               name: bot-secrets
               key: webhook-token
+        - name: WWVOTE__ConnectionStrings__DefaultConnection
+          valueFrom:
+            secretKeyRef:
+              name: bot-secrets
+              key: db-connection-string
         ports:
         - containerPort: 8080
           name: http

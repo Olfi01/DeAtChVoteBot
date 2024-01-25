@@ -8,6 +8,13 @@
       },
       "publishAllPorts": true,
       "useSSL": true
+    },
+    "MainApp.Api.Kestrel": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_URLS": "http://localhost:54469",
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
     }
   },
   "$schema": "http://json.schemastore.org/launchsettings.json"

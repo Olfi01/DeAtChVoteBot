@@ -5,7 +5,7 @@ on:
     branches:
     - master
     paths-ignore:
-    - Resources/**
+    - DeAtChVoteBot/Resources/**
   pull_request:
     branches:
     - master

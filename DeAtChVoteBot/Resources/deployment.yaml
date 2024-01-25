@@ -23,12 +23,12 @@ spec:
         imagePullPolicy: Always
         name: aspnet
         env:
-        - name: WWVOTE__BotConfig__BotToken
+        - name: WWVOTE__BotConfiguration__BotToken
           valueFrom:
             secretKeyRef:
               name: bot-secrets
               key: bot-token
-        - name: WWVOTE__BotConfig__SecretToken
+        - name: WWVOTE__BotConfiguration__SecretToken
           valueFrom:
             secretKeyRef:
               name: bot-secrets

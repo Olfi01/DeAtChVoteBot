@@ -40,7 +40,8 @@ public class UpdateHandlers(ILogger<UpdateHandlers> logger, IServiceProvider ser
         text = text.Contains('@') ? text.Remove(text.IndexOf('@')) : text;
         var handler = text switch
         {
-            "/sendpoll" => pollService.OpenNewPolls(),
+            "/sendpolltoday" => pollService.OpenNewPolls(DateTime.Now),
+            "/sendpolltomorrow" => pollService.OpenNewPolls(DateTime.Now.AddDays(1)),
             "/closepoll" => pollService.CloseCurrentPolls(),
             _ => Task.CompletedTask
         };

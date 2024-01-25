@@ -46,18 +46,17 @@ public class ManagePolls(ITelegramBotClient botClient, IOptions<BotConfiguration
         await botClient.ForwardMessageAsync(botConfig.AdminChat, botConfig.PollChannel, message.MessageId);
     }
 
-    public async Task OpenNewPolls()
+    public async Task OpenNewPolls(DateTime targetDate)
     {
         foreach (var category in dbContext.Categories.ToList())
         {
-            await OpenPoll(category);
+            await OpenPoll(category, targetDate);
         }
         dbContext.SaveChanges();
     }
 
-    private async Task OpenPoll(Category category)
+    private async Task OpenPoll(Category category, DateTime targetDate)
     {
-        DateTime targetDate = DateTime.Now.AddDays(1);
         string day = culture.DateTimeFormat.GetDayName(targetDate.DayOfWeek);
         string date = targetDate.ToString(culture.DateTimeFormat.ShortDatePattern);
         string pollQuestion = $"Große Runde für {day}, den {date} ({category.Name}):";

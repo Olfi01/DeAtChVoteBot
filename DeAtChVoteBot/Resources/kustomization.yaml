@@ -1,0 +1,8 @@
+﻿resources:
+- deployment.yaml
+- service.yaml
+- ingress.yaml
+
+images:
+- name: olfi01/deatchvote
+  newTag: v1

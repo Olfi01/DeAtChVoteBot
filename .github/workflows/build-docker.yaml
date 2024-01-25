@@ -21,6 +21,6 @@ jobs:
       if: ${{ github.event_name == 'push' }}
       run: |
         echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-        docker push olfi01/deatchvote
+        docker push olfi01/deatchvote:$(yq '.images[] | select(.name == "olfi01/deatchvote") | .newTag' ./DeAtChVoteBot/Resources/kustomization.yaml)
 
 

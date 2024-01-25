@@ -27,6 +27,7 @@ public class ConfigureWebhook(
             url: webhookAddress,
             allowedUpdates: new UpdateType[] { UpdateType.Message },
             secretToken: botConfig.SecretToken,
+            maxConnections: 4,
             cancellationToken: cancellationToken);
     }
 

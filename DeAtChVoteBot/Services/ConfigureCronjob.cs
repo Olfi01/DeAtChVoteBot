@@ -26,7 +26,7 @@ public class ConfigureCronjob(
         logger.LogInformation("Closing polls");
         await pollService.CloseCurrentPolls();
         logger.LogInformation("Opening new polls");
-        await pollService.OpenNewPolls();
+        await pollService.OpenNewPolls(DateTime.Now.AddDays(1));
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

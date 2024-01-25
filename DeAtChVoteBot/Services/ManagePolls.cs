@@ -1,8 +1,7 @@
-
+ï»¿
 using DeAtChVoteBot.Database;
 using DeAtChVoteBot.Database.Types;
 using Microsoft.Extensions.Options;
-using System.Collections.Concurrent;
 using System.Globalization;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -59,7 +58,7 @@ public class ManagePolls(ITelegramBotClient botClient, IOptions<BotConfiguration
     {
         string day = culture.DateTimeFormat.GetDayName(targetDate.DayOfWeek);
         string date = targetDate.ToString(culture.DateTimeFormat.ShortDatePattern);
-        string pollQuestion = $"Große Runde für {day}, den {date} ({category.Name}):";
+        string pollQuestion = $"GroÃŸe Runde fÃ¼r {day}, den {date} ({category.Name}):";
         var winners = category.ExcludeLastWinner ? dbContext.Winners.Select(w => w.Option).ToList() : [];
         var pollOptions = category.Options.Except(winners).Select(o => o.Name);
         Message pollMessage = await botClient.SendPollAsync(botConfig.PollChannel, pollQuestion, pollOptions, protectContent: true);

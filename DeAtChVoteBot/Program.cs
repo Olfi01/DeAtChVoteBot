@@ -22,6 +22,8 @@ public class Program
 
         builder.Services.AddDbContext<BotDataContext>(options => options.UseMySQL(builder.Configuration.GetConnectionString("DefaultConnection")!));
 
+        builder.Services.AddHealthChecks().AddDbContextCheck<BotDataContext>();
+
         // Register named HttpClient to get benefits of IHttpClientFactory
         // and consume it with ITelegramBotClient typed client.
         // More read:
@@ -57,6 +59,7 @@ public class Program
         // Construct webhook route from the Route configuration parameter
         // It is expected that BotController has single method accepting Update
         app.MapBotWebhookRoute<BotController>(route: botConfiguration.Route);
+        app.MapHealthChecks("/healthz");
         app.MapControllers();
         app.Run();
     }

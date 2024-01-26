@@ -42,14 +42,18 @@ spec:
         - containerPort: 8080
           name: http
           protocol: TCP
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: http
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8080
+            port: http
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 8080
+            port: http
         resources:
           requests:
             cpu: "100m"

@@ -14,6 +14,7 @@ public class ConfigureCronjob(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         TimeSpan dueTime = TimeOnly.Parse(botConfig.PollTime).ToTimeSpan() - DateTime.Now.TimeOfDay;
+        logger.LogDebug("Starting timer with due time of {TimeSpan}", dueTime);
         if (dueTime < TimeSpan.FromMinutes(2)) dueTime += TimeSpan.FromDays(1);
         timer = new Timer(TimerElapsed, null, dueTime, TimeSpan.FromHours(24));
         return Task.CompletedTask;

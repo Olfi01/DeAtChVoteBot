@@ -39,6 +39,7 @@ public class Program
 
         builder.Services.AddScoped<UpdateHandlers>();
         builder.Services.AddScoped<ManagePolls>();
+        builder.Services.AddScoped<MessageHandler>();
 
         // There are several strategies for completing asynchronous tasks during startup.
         // Some of them could be found in this article https://andrewlock.net/running-async-tasks-on-app-startup-in-asp-net-core-part-1/

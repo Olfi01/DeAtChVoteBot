@@ -36,6 +36,7 @@ public class UpdateHandlers(ILogger<UpdateHandlers> logger, IServiceProvider ser
     {
         if (message.From == null || !dbContext.Admins.Any(a => a.TgId == message.From.Id) || cancellationToken.IsCancellationRequested) return;
         var pollService = serviceProvider.GetRequiredService<ManagePolls>();
+        var messageService = serviceProvider.GetRequiredService<MessageHandler>();
         string text = message.Text!;
         text = text.Contains('@') ? text.Remove(text.IndexOf('@')) : text;
         var handler = text switch
@@ -43,6 +44,7 @@ public class UpdateHandlers(ILogger<UpdateHandlers> logger, IServiceProvider ser
             "/sendpolltoday" => pollService.OpenNewPolls(DateTime.Now),
             "/sendpolltomorrow" => pollService.OpenNewPolls(DateTime.Now.AddDays(1)),
             "/closepoll" => pollService.CloseCurrentPolls(),
+            "/ping" => messageService.RespondToPingMessage(message),
             _ => Task.CompletedTask
         };
         await handler;
